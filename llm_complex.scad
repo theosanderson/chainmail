@@ -8,29 +8,36 @@
 // base plate, supports for the bottom layer, and side walls.
 // Revision: Positioned side walls to be tight against ring extents.
 // Revision: Added angled supports for linkers in layers z_idx >= 1.
+// Revision: Added support_joiners between layers.
 // -------------------------------------------------------------
 
 // ─── USER-ADJUSTABLE PARAMETERS ───────────────────────────────
-$fn                 = 18;      // global resolution (increase for smoother rings, min 12 for supports)
-ring_id             = 12;      // inner diameter of each ring (mm)
-wire_d              = 2.5;       // wire (ring) thickness / diameter (mm)
+$fn                      = 18;      // global resolution (increase for smoother rings, min 12 for supports)
+ring_id                  = 12;      // inner diameter of each ring (mm)
+wire_d                   = 2.5;     // wire (ring) thickness / diameter (mm)
 
-cols                = 2;       // number of rings horizontally (number of 'cell' units)
-rows                = 4;       // number of rings vertically (number of 'cell' rows)
-stacks              = 4;       // number of layers in Z-direction
+cols                     = 2;       // number of rings horizontally (number of 'cell' units)
+rows                     = 4;       // number of rings vertically (number of 'cell' rows)
+stacks                   = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
 add_base_plate_and_supports = true; // Set to true to add base and supports
-base_plate_gap            = 0.5;     // Gap between lowest ring part and base plate top
-base_plate_thickness      = .7;   // Thickness of the base plate
-support_diameter          = 2*wire_d * 0.75; // Diameter of support pillars
-base_plate_margin         = wire_d; // Margin around chainmail for base plate size
-angled_support_thickness  = wire_d * 0.6; // Thickness of the new angled supports
+base_plate_gap           = 0.5;     // Gap between lowest ring part and base plate top
+base_plate_thickness     = 0.7;     // Thickness of the base plate
+support_diameter         = 2*wire_d * 0.75; // Diameter of support pillars
+base_plate_margin        = wire_d;  // Margin around chainmail for base plate size
+angled_support_thickness = wire_d * 0.6; // Thickness of the new angled supports
 
 // Parameters for optional side walls
-add_side_walls            = true;  // Set to true to add side walls
-wall_thickness            = base_plate_thickness; // Thickness of the side walls
-wall_height_extension     = wire_d; // How much walls extend above highest ring
+add_side_walls           = true;    // Set to true to add side walls
+wall_thickness           = base_plate_thickness; // Thickness of the side walls
+wall_height_extension    = wire_d;  // How much walls extend above highest ring
+
+// Parameters for new support_joiner
+add_support_joiners      = true;    // Set to true to add support_joiners between layers
+support_joiner_dim_x     = 4;       // mm (width of the joiner cube)
+support_joiner_dim_y     = 0.4;     // mm (depth of the joiner cube)
+support_joiner_dim_z     = 0.5;     // mm (height of the joiner cube, between layers)
 
 // ─── DERIVED GEOMETRY PARAMETERS (from original parameterization) ─────
 cell_spacing_x = ring_id + 2 * wire_d;
@@ -41,8 +48,8 @@ intra_cell_pair_offset_y = (ring_id / 2) - (wire_d * 0.75);
 linker_base_offset_x = -wire_d * 1.25;
 linker_base_offset_y = ring_id * 0.75;
 linker_base_offset_z = ring_id / 2;
-linker_alt_translate_x_offset = -wire_d * 1.25;
-linker_alt_translate_y_offset = wire_d * 1.7;
+linker_alt_translate_x_offset = -wire_d * 0.55;
+linker_alt_translate_y_offset = wire_d * 1.6;
 
 cell_ring1_rot_x = 45;
 cell_ring2_rot_x = -45;
@@ -174,6 +181,11 @@ module support_pillar(target_x, target_y, pillar_bottom_z, pillar_top_z, diamete
     }
 }
 
+// NEW MODULE for support_joiner
+module support_joiner() {
+    cube([support_joiner_dim_x, support_joiner_dim_y, support_joiner_dim_z], center=true);
+}
+
 // NEW MODULE for angled supports
 module angled_support_beam(contact_x, contact_y, contact_z, from_min_x_side, thickness,
                            plate_min_x, plate_max_x, current_wall_thickness, base_z_level, use_walls, margin_if_no_walls) {
@@ -223,9 +235,10 @@ module angled_support_beam(contact_x, contact_y, contact_z, from_min_x_side, thi
 module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
     chainmail_rings(r, c, s);
 
-    if ((add_base_plate_and_supports || add_side_walls) && r > 0 && c > 0 && s > 0) {
+    if ((add_base_plate_and_supports || add_side_walls || add_support_joiners) && r > 0 && c > 0 && s > 0) {
         // --- Calculate Overall Z Extents of the Model ---
-        _lowest_z_cell_abs = get_cell_ring_lowest_z_rel(ring_id, wire_d, cell_ring1_rot_x) + 0.2;
+        // Adjusted _lowest_z_cell_abs to be slightly less aggressive for robustness
+        _lowest_z_cell_abs = get_cell_ring_lowest_z_rel(ring_id, wire_d, cell_ring1_rot_x) + wire_d*0.1; // Was +0.2
         
         _lowest_z_linker_abs = (s > 1) ? (linker_base_offset_z - _linker_z_extent_rel) : _lowest_z_cell_abs;
         _overall_lowest_z_of_model = min(_lowest_z_cell_abs, _lowest_z_linker_abs);
@@ -258,7 +271,6 @@ module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
             }
 
             // Linker supports for z_idx = 0 (connecting layer 0 to 1)
-            // These linkers are always "even" type (not alternate)
             if (s > 1) { // Linkers exist only if more than one stack
                 for (y_idx = [0 : r - 2]) { // Up to r-2 for linkers
                     linker_actual_center_x = linker_base_offset_x;
@@ -272,35 +284,70 @@ module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
             }
 
             // --- Angled Supports for Linkers in layers z_idx = 1 and above ---
-            // Linkers are generated for z_linker_idx = [0 : s-2]
-            // We want supports for linkers where z_linker_idx >= 1
-            if (s > 2) { // Need at least 3 stacks for linkers at z_idx=1 (s-2 >= 1)
+            if (s > 2) { // Need at least 3 stacks for linkers at z_idx=1
                 for (z_linker_idx = [1 : s - 2]) {
-                    is_odd_linker_layer = z_linker_idx % 2 == 1; // Corresponds to 'odd_z' in linker module for this z_linker_idx
-
-                    for (y_idx = [0 : r - 2]) { // Linkers y-condition
+                    is_odd_linker_layer = z_linker_idx % 2 == 1;
+                    for (y_idx = [0 : r - 2]) {
                         linker_center_z = linker_base_offset_z + z_linker_idx * layer_spacing_z;
                         linker_contact_z_underside = linker_center_z - _linker_z_extent_rel;
 
-                        if (!is_odd_linker_layer) { // "Regular" linker (e.g. z_linker_idx = 0, 2, ...)
-                                                    // but we start loop from z_linker_idx = 1. So this means z_linker_idx = 2, 4...
-                                                    // This is effectively the "left" or "min_x" side group of linkers.
+                        if (!is_odd_linker_layer) {
                             linker_contact_x = linker_base_offset_x;
                             linker_contact_y = linker_base_offset_y + y_idx * cell_spacing_y_factor;
                             angled_support_beam(linker_contact_x, linker_contact_y, linker_contact_z_underside,
-                                                true, // from_min_x_side
-                                                angled_support_thickness,
+                                                true, angled_support_thickness,
                                                 _plate_actual_min_x, _plate_actual_max_x, wall_thickness,
                                                 base_plate_top_surface_z, add_side_walls, base_plate_margin);
-                        } else { // "Alternate" linker (e.g. z_linker_idx = 1, 3, ...)
-                                 // This is effectively the "right" or "max_x" side group of linkers.
+                        } else {
                             linker_contact_x = linker_base_offset_x + cols * cell_spacing_x + linker_alt_translate_x_offset;
                             linker_contact_y = (linker_base_offset_y + y_idx * cell_spacing_y_factor) + linker_alt_translate_y_offset;
                             angled_support_beam(linker_contact_x, linker_contact_y, linker_contact_z_underside,
-                                                false, // from_min_x_side (so, from max_x side)
-                                                angled_support_thickness,
+                                                false, angled_support_thickness,
                                                 _plate_actual_min_x, _plate_actual_max_x, wall_thickness,
                                                 base_plate_top_surface_z, add_side_walls, base_plate_margin);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (add_support_joiners && s > 1 && r > 0 && c > 0) {
+            for (z_layer_idx = [0 : s - 2]) { // Iterate between cell layers z_layer_idx (lower) and z_layer_idx+1 (upper)
+                
+                // Determine the orientation of the upper layer's rings for Y-offset calculation
+                upper_cell_layer_idx = z_layer_idx + 1;
+                is_upper_cell_layer_mirrored = (upper_cell_layer_idx % 2 == 1);
+
+                // Calculate effective rotation angles for contact point Y-offset determination
+                // These depend on whether the upper layer (which the joiner sits below) is mirrored
+                effective_ring1_rot_x_for_contact = is_upper_cell_layer_mirrored ? -cell_ring1_rot_x : cell_ring1_rot_x;
+                effective_ring2_rot_x_for_contact = is_upper_cell_layer_mirrored ? -cell_ring2_rot_x : cell_ring2_rot_x;
+                
+                // Dynamically calculate Y offsets based on the upper layer's orientation
+                joiner_contact_y_offset1 = get_cell_ring_contact_y_offset(ring_id, wire_d, effective_ring1_rot_x_for_contact);
+                joiner_contact_y_offset2 = get_cell_ring_contact_y_offset(ring_id, wire_d, effective_ring2_rot_x_for_contact);
+
+                // Z position for the center of the joiner: midway between the nominal Z-centers of the two layers
+                joiner_center_z = z_layer_idx * layer_spacing_z + layer_spacing_z / 2;
+
+                for (y_idx = [0 : r - 1]) {
+                    for (x_idx = [0 : c - 1]) {
+                        // Base X,Y for the cell
+                        cell_base_x_for_joiner = x_idx * cell_spacing_x;
+                        cell_base_y_for_joiner = y_idx * cell_spacing_y_factor;
+
+                        // Joiner for the first ring position in the cell
+                        translate([cell_base_x_for_joiner,
+                                   cell_base_y_for_joiner + joiner_contact_y_offset1, // Use dynamic Y-offset
+                                   joiner_center_z]) {
+                            support_joiner();
+                        }
+
+                        // Joiner for the second ring position in the cell
+                        translate([cell_base_x_for_joiner + intra_cell_pair_offset_x,
+                                   cell_base_y_for_joiner + intra_cell_pair_offset_y + joiner_contact_y_offset2, // Use dynamic Y-offset
+                                   joiner_center_z]) {
+                            support_joiner();
                         }
                     }
                 }
@@ -311,15 +358,17 @@ module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
         if (add_side_walls) {
             wall_actual_height = _overall_highest_z_of_model + wall_height_extension - base_plate_top_surface_z;
             wall_center_z = base_plate_top_surface_z + wall_actual_height / 2;
-            wall_actual_depth = base_plate_final_depth;
+            wall_actual_depth = base_plate_final_depth; // Use the calculated depth of the base plate
 
-            translate([_plate_actual_min_x - wall_thickness/2,
-                       base_plate_final_center_y,
+            // Wall at min X
+            translate([_plate_actual_min_x - wall_thickness/2, // Positioned at the edge of actual rings
+                       base_plate_final_center_y,    // Centered with the plate's Y
                        wall_center_z])
                 cube([wall_thickness, wall_actual_depth, wall_actual_height], center=true);
 
-            translate([_plate_actual_max_x + wall_thickness/2,
-                       base_plate_final_center_y,
+            // Wall at max X
+            translate([_plate_actual_max_x + wall_thickness/2, // Positioned at the edge of actual rings
+                       base_plate_final_center_y,    // Centered with the plate's Y
                        wall_center_z])
                 cube([wall_thickness, wall_actual_depth, wall_actual_height], center=true);
         }
