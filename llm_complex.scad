@@ -11,12 +11,12 @@
 // -------------------------------------------------------------
 
 // ─── USER-ADJUSTABLE PARAMETERS ───────────────────────────────
-$fn                 = 16;      // global resolution (increase for smoother rings, min 12 for supports)
+$fn                 = 18;      // global resolution (increase for smoother rings, min 12 for supports)
 ring_id             = 12;      // inner diameter of each ring (mm)
 wire_d              = 2.5;       // wire (ring) thickness / diameter (mm)
 
-cols                = 10;       // number of rings horizontally (number of 'cell' units)
-rows                = 20;       // number of rings vertically (number of 'cell' rows)
+cols                = 2;       // number of rings horizontally (number of 'cell' units)
+rows                = 4;       // number of rings vertically (number of 'cell' rows)
 stacks              = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
@@ -33,9 +33,9 @@ wall_thickness            = base_plate_thickness; // Thickness of the side walls
 wall_height_extension     = wire_d; // How much walls extend above highest ring
 
 // ─── DERIVED GEOMETRY PARAMETERS (from original parameterization) ─────
-cell_spacing_x = ring_id + 2.25 * wire_d;
+cell_spacing_x = ring_id + 2 * wire_d;
 cell_spacing_y_factor = (ring_id + 2.25 * wire_d) / 2;
-layer_spacing_z = ring_id*1.00; // Z-distance between centers of layers
+layer_spacing_z = ring_id*1.05; // Z-distance between centers of layers
 intra_cell_pair_offset_x = cell_spacing_x / 2;
 intra_cell_pair_offset_y = (ring_id / 2) - (wire_d * 0.75);
 linker_base_offset_x = -wire_d * 1.25;
@@ -116,7 +116,7 @@ _linker_z_extent_rel = (ring_id/2 + wire_d);
 module ring(id = ring_id, wd = wire_d) {
     rotate_extrude($fn=$fn)
         translate([ (id + wd)/2 , 0, 0 ])
-            circle(d = wd, $fn=$fn);
+            circle(d = wd, $fn=6);
 }
 
 module conditional_mirror(condition = true, v = [1, 0, 0]) {
