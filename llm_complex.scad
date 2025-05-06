@@ -22,7 +22,7 @@ stacks              = 4;       // number of layers in Z-direction
 // Parameters for optional base plate and supports
 add_base_plate_and_supports = true; // Set to true to add base and supports
 base_plate_gap            = 0.5;     // Gap between lowest ring part and base plate top
-base_plate_thickness      = 1.5;   // Thickness of the base plate
+base_plate_thickness      = .7;   // Thickness of the base plate
 support_diameter          = wire_d * 0.75; // Diameter of support pillars
 base_plate_margin         = wire_d; // Margin around chainmail for base plate size
 angled_support_thickness  = wire_d * 0.6; // Thickness of the new angled supports
