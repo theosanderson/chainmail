@@ -15,8 +15,8 @@ $fn                 = 20;      // global resolution (increase for smoother rings
 ring_id             = 10;      // inner diameter of each ring (mm)
 wire_d              = 2;       // wire (ring) thickness / diameter (mm)
 
-cols                = 3;       // number of rings horizontally (number of 'cell' units)
-rows                = 3;       // number of rings vertically (number of 'cell' rows)
+cols                = 13;       // number of rings horizontally (number of 'cell' units)
+rows                = 26;       // number of rings vertically (number of 'cell' rows)
 stacks              = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
@@ -54,7 +54,7 @@ _x_coords_cells1 = [for (x_idx = [0:cols-1]) x_idx * cell_spacing_x];
 _x_coords_cells2 = [for (x_idx = [0:cols-1]) x_idx * cell_spacing_x + intra_cell_pair_offset_x];
 // Adjusted linker x-coord generation to reflect their actual conditional placement
 _x_coords_linkers_even_z_layers = (rows > 0 && cols > 0 && stacks > 0) ? [linker_base_offset_x] : [];
-_x_coords_linkers_odd_z_layers = (rows > 0 && cols > 0 && stacks > 1) ? [linker_base_offset_x + (rows * cell_spacing_x + linker_alt_translate_x_offset)] : [];
+_x_coords_linkers_odd_z_layers = (rows > 0 && cols > 0 && stacks > 1) ? [linker_base_offset_x + (cols * cell_spacing_x + linker_alt_translate_x_offset)] : [];
 
 
 _all_x_centers = concat(
@@ -145,7 +145,7 @@ module linker(y_idx, z_idx) {
         if(!odd_z) { // Even layer linkers (0, 2, ...)
             rotate([linker_rot_x_angle, linker_rot_y_angle, 0]) ring();
         } else { // Odd layer linkers (1, 3, ...) - these are the "alternate" ones
-            translate([rows * cell_spacing_x + linker_alt_translate_x_offset,
+            translate([cols * cell_spacing_x + linker_alt_translate_x_offset,
                        linker_alt_translate_y_offset, 0])
             rotate([linker_rot_x_angle, linker_rot_y_angle, 0]) ring();
         }
@@ -293,7 +293,7 @@ module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
                                                 base_plate_top_surface_z, add_side_walls, base_plate_margin);
                         } else { // "Alternate" linker (e.g. z_linker_idx = 1, 3, ...)
                                  // This is effectively the "right" or "max_x" side group of linkers.
-                            linker_contact_x = linker_base_offset_x + rows * cell_spacing_x + linker_alt_translate_x_offset;
+                            linker_contact_x = linker_base_offset_x + cols * cell_spacing_x + linker_alt_translate_x_offset;
                             linker_contact_y = (linker_base_offset_y + y_idx * cell_spacing_y_factor) + linker_alt_translate_y_offset;
                             angled_support_beam(linker_contact_x, linker_contact_y, linker_contact_z_underside,
                                                 false, // from_min_x_side (so, from max_x side)
