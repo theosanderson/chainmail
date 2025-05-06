@@ -11,19 +11,19 @@
 // -------------------------------------------------------------
 
 // ─── USER-ADJUSTABLE PARAMETERS ───────────────────────────────
-$fn                 = 20;      // global resolution (increase for smoother rings, min 12 for supports)
-ring_id             = 10;      // inner diameter of each ring (mm)
-wire_d              = 2;       // wire (ring) thickness / diameter (mm)
+$fn                 = 16;      // global resolution (increase for smoother rings, min 12 for supports)
+ring_id             = 12;      // inner diameter of each ring (mm)
+wire_d              = 2.5;       // wire (ring) thickness / diameter (mm)
 
-cols                = 13;       // number of rings horizontally (number of 'cell' units)
-rows                = 26;       // number of rings vertically (number of 'cell' rows)
+cols                = 2;       // number of rings horizontally (number of 'cell' units)
+rows                = 4;       // number of rings vertically (number of 'cell' rows)
 stacks              = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
 add_base_plate_and_supports = true; // Set to true to add base and supports
 base_plate_gap            = 0.5;     // Gap between lowest ring part and base plate top
 base_plate_thickness      = .7;   // Thickness of the base plate
-support_diameter          = wire_d * 0.75; // Diameter of support pillars
+support_diameter          = 2*wire_d * 0.75; // Diameter of support pillars
 base_plate_margin         = wire_d; // Margin around chainmail for base plate size
 angled_support_thickness  = wire_d * 0.6; // Thickness of the new angled supports
 
@@ -35,14 +35,14 @@ wall_height_extension     = wire_d; // How much walls extend above highest ring
 // ─── DERIVED GEOMETRY PARAMETERS (from original parameterization) ─────
 cell_spacing_x = ring_id + 2.25 * wire_d;
 cell_spacing_y_factor = (ring_id + 2.25 * wire_d) / 2;
-layer_spacing_z = ring_id; // Z-distance between centers of layers
+layer_spacing_z = ring_id*1.00; // Z-distance between centers of layers
 intra_cell_pair_offset_x = cell_spacing_x / 2;
 intra_cell_pair_offset_y = (ring_id / 2) - (wire_d * 0.75);
 linker_base_offset_x = -wire_d * 1.25;
 linker_base_offset_y = ring_id * 0.75;
 linker_base_offset_z = ring_id / 2;
-linker_alt_translate_x_offset = -wire_d * 0.75;
-linker_alt_translate_y_offset = -wire_d * 1.5;
+linker_alt_translate_x_offset = -wire_d * 1.25;
+linker_alt_translate_y_offset = wire_d * 1.7;
 
 cell_ring1_rot_x = 45;
 cell_ring2_rot_x = -45;
@@ -147,7 +147,7 @@ module linker(y_idx, z_idx) {
         } else { // Odd layer linkers (1, 3, ...) - these are the "alternate" ones
             translate([cols * cell_spacing_x + linker_alt_translate_x_offset,
                        linker_alt_translate_y_offset, 0])
-            rotate([linker_rot_x_angle, linker_rot_y_angle, 0]) ring();
+            rotate([-linker_rot_x_angle, linker_rot_y_angle, 0]) ring();
         }
     }
 }
@@ -225,7 +225,8 @@ module full_chainmail_assembly(r = rows, c = cols, s = stacks) {
 
     if ((add_base_plate_and_supports || add_side_walls) && r > 0 && c > 0 && s > 0) {
         // --- Calculate Overall Z Extents of the Model ---
-        _lowest_z_cell_abs = get_cell_ring_lowest_z_rel(ring_id, wire_d, cell_ring1_rot_x);
+        _lowest_z_cell_abs = get_cell_ring_lowest_z_rel(ring_id, wire_d, cell_ring1_rot_x) + 0.2;
+        
         _lowest_z_linker_abs = (s > 1) ? (linker_base_offset_z - _linker_z_extent_rel) : _lowest_z_cell_abs;
         _overall_lowest_z_of_model = min(_lowest_z_cell_abs, _lowest_z_linker_abs);
 
