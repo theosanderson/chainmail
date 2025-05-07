@@ -16,8 +16,8 @@ $fn                      = 18;      // global resolution (increase for smoother 
 ring_id                  = 12;      // inner diameter of each ring (mm)
 wire_d                   = 2.5;     // wire (ring) thickness / diameter (mm)
 
-cols                     = 2;       // number of rings horizontally (number of 'cell' units)
-rows                     = 4;       // number of rings vertically (number of 'cell' rows)
+cols                     = 3;       // number of rings horizontally (number of 'cell' units)
+rows                     = 6;       // number of rings vertically (number of 'cell' rows)
 stacks                   = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
