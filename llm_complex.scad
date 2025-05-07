@@ -16,14 +16,14 @@ $fn                      = 18;      // global resolution (increase for smoother 
 ring_id                  = 12;      // inner diameter of each ring (mm)
 wire_d                   = 2.5;     // wire (ring) thickness / diameter (mm)
 
-cols                     = 3;       // number of rings horizontally (number of 'cell' units)
-rows                     = 6;       // number of rings vertically (number of 'cell' rows)
+cols                     = 11;       // number of rings horizontally (number of 'cell' units)
+rows                     = 22;       // number of rings vertically (number of 'cell' rows)
 stacks                   = 4;       // number of layers in Z-direction
 
 // Parameters for optional base plate and supports
 add_base_plate_and_supports = true; // Set to true to add base and supports
 base_plate_gap           = 0.5;     // Gap between lowest ring part and base plate top
-base_plate_thickness     = 0.7;     // Thickness of the base plate
+base_plate_thickness     = 0.3;     // Thickness of the base plate
 support_diameter         = 2*wire_d * 0.75; // Diameter of support pillars
 base_plate_margin        = wire_d;  // Margin around chainmail for base plate size
 angled_support_thickness = wire_d * 0.6; // Thickness of the new angled supports
